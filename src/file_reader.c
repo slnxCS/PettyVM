@@ -23,6 +23,7 @@ char* read_file(char* fname) {
         exit(1);
     }
 
-    fread(buffer, file_lenght, 1, f);
+    fread(buffer, 1, file_lenght, f);
+    fclose(f);
     return buffer;
 }
