@@ -5,12 +5,13 @@
 #include "types.h"
 #include "Collections/stack.h"
 
-#define BYTECODE_VER 1
+#define BYTECODE_VER 1.1f
 
 typedef enum VM_OpCode : byte {
     PUSH_CONSTANT = 1,
     STORE_LOCAL = 2,
     STORE_GLOBAL = 3,
+    SYS_CALL = 4,
     LOAD_LOCAL = 5,
     LOAD_GLOBAL = 6,
 
@@ -41,6 +42,7 @@ struct VM
 
 extern int32_t VM_read_raw_Int();
 extern PettyValue VM_read_Int();
+extern float32 VM_read_raw_float();
 extern int VM_init(byte* input, const char* file_name);
 extern int VM_Start();
 

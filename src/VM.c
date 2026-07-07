@@ -1,6 +1,8 @@
 #include "VM.h"
 #include "Collections/stack.h"
 #include "PettyValue.h"
+#include "types.h"
+#include <assert.h>
 #include <iso646.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -11,6 +13,17 @@
 #define vm_advance (vm.current_instruction++)
 #define vm_pop (stack_pop(&vm.stack))
 #define vm_push(obj) stack_push(&vm.stack, obj)
+
+typedef void(*PettySysFunc)(VM* vm);
+
+void pt_vm_sysprint_int32(VM* vm) {
+    int32_t num = stack_pop(&(vm->stack)).as.as_int;
+    printf("%d\n", num);
+}
+
+PettySysFunc vm_sys_funcs[] = {
+    pt_vm_sysprint_int32,
+};
 
 VM vm;
 
@@ -55,33 +68,48 @@ int VM_init(byte* input, const char* file_name)
     }
     for (int i = 0; i < 6; i++)
         vm_advance;
-    int32_t file_byteCodeVersion = VM_read_raw_Int();
+    float32 file_byteCodeVersion = VM_read_raw_float();
     if (file_byteCodeVersion != BYTECODE_VER) {
-        fprintf(stderr, "The bytecode version for this file is outdated or newer. Current VM bytecode version : %d. File bytecode version : %d. \n" 
+        fprintf(stderr, "The bytecode version for this file is outdated or newer. Current VM bytecode version : %f. File bytecode version : %f. \n" 
             "Please recompile the file to match the current bytecode version of the vm, or update the vm for your file version\n", BYTECODE_VER, file_byteCodeVersion);
         exit(2);
     }
-    int32_t globals_len = VM_read_raw_Int();
-    vm.Globals = malloc(sizeof(PettyValue) * globals_len);
     vm.ConstantsCount = VM_read_raw_Int();
     vm.Constants = malloc(sizeof(PettyValue) * vm.ConstantsCount);
     for (uint32_t i = 0; i < vm.ConstantsCount; i++) 
         VM_addConstant(i);
+    int32_t globals_c = VM_read_raw_Int();
+    vm.Globals = malloc(sizeof(PettyValue) * globals_c);
     vm.stack = stack_init();
     VM_initBuiltins();
+    VM_Start();
+    vm_advance;
     return 0;
 }
 
-uint64_t VM_read_ID() {
-    uint64_t v = 0;
+//uint64_t VM_read_ID() {
+//    uint64_t v = 0;
+//
+//    for (int i = 0; i < 8; i++) 
+//    {
+//        v |= ((uint8_t)current_code) << (8 * i);
+//        vm_advance;
+//    }
+//
+//    return v;
+//}
 
-    for (int i = 0; i < 8; i++) 
-    {
-        v |= ((uint8_t)current_code) << (8 * i);
+float32 VM_read_raw_float() {
+    uint8_t bytes[4];
+    for (int i = 0; i < 4; i++) {
+        bytes[i] = (uint8_t)current_code;
         vm_advance;
     }
 
-    return v;
+    float32 num;
+
+    memcpy(&num, bytes, sizeof(float32));
+    return num;
 }
 
 int32_t VM_read_raw_Int() {
@@ -125,6 +153,13 @@ int VM_Start()
         VM_OpCode current = current_code;
         vm_advance;
         switch (current) {
+            case SYS_CALL :
+            {
+                int32_t sys_func_index = VM_read_raw_Int();
+                vm_sys_funcs[sys_func_index](&vm);
+                break;
+            }
+
             case PUSH_CONSTANT :  
             {
                 int32_t index = VM_read_raw_Int();
@@ -134,7 +169,7 @@ int VM_Start()
 
             case STORE_GLOBAL : 
             {
-                uint64_t index = VM_read_ID();
+                int32_t index = VM_read_raw_Int();
                 PettyValue obj = stack_pop(&vm.stack);
                 vm.Globals[index] = obj;
                 break;
@@ -142,7 +177,7 @@ int VM_Start()
 
             case LOAD_GLOBAL : 
             {
-                uint64_t index = VM_read_ID();
+                int32_t index = VM_read_raw_Int();
                 vm_push(vm.Globals[index]);
                 break;
             }
@@ -177,12 +212,12 @@ int VM_Start()
                 stack_push(&vm.stack, result);
                 break;
             }
+
+            case HALT : goto vm_end;
         }
     }
 
-    printf("%d\n", vm.Globals[6].as.as_int);
-    printf("%d\n", vm.Globals[7].as.as_int);
-    VM_free();
+    vm_end :
     
     return 0;
 }
