@@ -5,7 +5,9 @@
 #include "types.h"
 #include "Collections/stack.h"
 
-#define BYTECODE_VER 1.1f
+#define BYTECODE_VER 1.2f
+
+#define FRAME_STACK_MAX 1000
 
 typedef enum VM_OpCode : byte {
     PUSH_CONSTANT = 1,
@@ -14,18 +16,33 @@ typedef enum VM_OpCode : byte {
     SYS_CALL = 4,
     LOAD_LOCAL = 5,
     LOAD_GLOBAL = 6,
+    RET = 7,
+    CALL = 8,
+    RESERVE_LOCAL = 9,
 
     ADD_INT = 10,
     SUB_INT = 11,
     DIV_INT = 12,
     MUL_INT = 13,
+    ADD_FLOAT = 17,
+    SUB_FLOAT = 18,
+    MUL_FLOAT = 19,
+    DIV_FLOAT = 20,
 
     HALT = 15,
 } VM_OpCode;
 
 typedef enum VM_ConstantType {
     CONSTANT_INT = 0,
+    CONSTANT_FLOAT = 1,
 } VM_ConstantType;
+
+typedef struct Frame Frame;
+
+struct Frame {
+    uint32_t return_ip;
+    uint32_t stack_ptr_index;
+};
 
 typedef struct VM VM;
 
@@ -38,11 +55,15 @@ struct VM
     //uint64_t GlobalsLen;
     PettyValue* Constants;
     uint32_t ConstantsCount;
+    int* Functions;
+    Frame call_stack[FRAME_STACK_MAX];
+    int32_t frame_pointer;
 };
 
 extern int32_t VM_read_raw_Int();
 extern PettyValue VM_read_Int();
-extern float32 VM_read_raw_float();
+extern float32_t VM_read_raw_float();
+extern PettyValue VM_read_float();
 extern int VM_init(byte* input, const char* file_name);
 extern int VM_Start();
 

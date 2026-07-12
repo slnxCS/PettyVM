@@ -8,8 +8,8 @@ typedef unsigned short uint16_t;
 typedef long int64_t;
 typedef unsigned long uint64_t;
 
-typedef float float32;
-typedef double float64;
+typedef float float32_t;
+typedef double float64_t;
 
 typedef unsigned char byte;
 typedef char sbyte;

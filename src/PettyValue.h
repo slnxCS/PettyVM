@@ -2,11 +2,12 @@
 #define PT_VAL_H
 
 #include "PettyObject.h"
-#include <stdint.h>
+#include "types.h"
 
 
-typedef enum PettyValueKind {
+typedef enum PettyValueKind : unsigned char {
     PT_INT32,
+    PT_FLOAT32,
     PT_OBJ_REF,
 } PettyValueKind;
 
@@ -14,6 +15,7 @@ typedef struct PettyValue {
     PettyValueKind kind;
     union {
         int32_t as_int;
+        float32_t as_float;
         PettyObject* as_obj_ref;
     } as;
 } PettyValue;
