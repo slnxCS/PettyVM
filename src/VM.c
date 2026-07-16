@@ -24,21 +24,30 @@ case opCode : \
     break;\
 }
 
-typedef void(*PettySysFunc)(VM* vm);
+typedef void(*PettySysFunc)(VM* vm, int32_t arity);
 
-void pt_vm_sysprint_int32(VM* vm) {
+void pt_vm_sysprint_int32(VM* vm, int32_t arity) {
     int32_t num = stack_pop(&(vm->stack)).as.as_int;
     printf("%d\n", num);
 }
 
-void pt_vm_sysprint_float32(VM* vm) {
+void pt_vm_sysprint_float32(VM* vm, int32_t arity) {
     float32_t num = stack_pop(&(vm->stack)).as.as_float;
     printf("%g\n", num);
+}
+
+void pt_vm_sysread_int32(VM* vm, int32_t arity) {
+    PettyValue val;
+    val.kind = PT_INT32;
+    scanf("%d", &(val.as.as_int));
+    stack_push(&vm->stack, val);
 }
 
 PettySysFunc vm_sys_funcs[] = {
     pt_vm_sysprint_int32,
     pt_vm_sysprint_float32,
+    NULL,
+    pt_vm_sysread_int32,
 };
 
 VM vm;
@@ -231,7 +240,8 @@ int VM_Start()
             case SYS_CALL :
             {
                 int32_t sys_func_index = VM_read_raw_Int();
-                vm_sys_funcs[sys_func_index](&vm);
+                int32_t arity = VM_read_raw_Int();
+                vm_sys_funcs[sys_func_index](&vm, arity);
                 break;
             }
 
