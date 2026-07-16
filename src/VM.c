@@ -282,6 +282,15 @@ int VM_Start()
                 break;
             }
 
+            case CAST_FROM_FLOAT32_TO_INT32 : 
+            {
+                PettyValue val = vm_pop;
+                val.as.as_int = (int32_t)val.as.as_float;
+                val.kind = PT_INT32;
+                vm_push(val);
+                break;
+            }
+
             _processOpCodeMath(int32_t, as_int, ADD_INT, +, as_int, PT_INT32, int32_t)
             _processOpCodeMath(int32_t, as_int, SUB_INT, -, as_int, PT_INT32, int32_t)
             _processOpCodeMath(int32_t, as_int, MUL_INT, *, as_int, PT_INT32, int32_t)

@@ -24,12 +24,13 @@ typedef enum VM_OpCode : byte {
     SUB_INT = 11,
     DIV_INT = 12,
     MUL_INT = 13,
+    CAST_FROM_FLOAT32_TO_INT32 = 14,
+    HALT = 15,
+    CAST_FROM_INT32_TO_FLOAT32 = 16,
     ADD_FLOAT = 17,
     SUB_FLOAT = 18,
     MUL_FLOAT = 19,
     DIV_FLOAT = 20,
-
-    HALT = 15,
 } VM_OpCode;
 
 typedef enum VM_ConstantType {
