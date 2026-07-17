@@ -24,11 +24,24 @@ case opCode : \
     break;\
 }
 
+#define _processOpCodeCast(opCode, fromAsType, toAsType, castKind, castType) \
+case opCode : \
+{\
+    PettyValue val = vm_pop;\
+    val.as.toAsType = (castType)val.as.fromAsType;\
+    val.kind = castKind;\
+    vm_push(val);\
+    break;\
+}
+
 typedef void(*PettySysFunc)(VM* vm, int32_t arity);
 
 void pt_vm_sysprint_int32(VM* vm, int32_t arity) {
-    int32_t num = stack_pop(&(vm->stack)).as.as_int;
-    printf("%d\n", num);
+    //for (int i = 0; i < arity; i++) 
+    {
+        int32_t num = stack_pop(&(vm->stack)).as.as_int;
+        printf("%d\n", num);
+    }
 }
 
 void pt_vm_sysprint_float32(VM* vm, int32_t arity) {
@@ -43,10 +56,15 @@ void pt_vm_sysread_int32(VM* vm, int32_t arity) {
     stack_push(&vm->stack, val);
 }
 
+void pt_vm_sysprint_bool(VM* vm, int32_t arity) {
+    PettyValue value = stack_pop(&(vm->stack));
+    printf("%s\n", value.as.as_bool == 1 ? "true" : "false");
+}
+
 PettySysFunc vm_sys_funcs[] = {
     pt_vm_sysprint_int32,
     pt_vm_sysprint_float32,
-    NULL,
+    pt_vm_sysprint_bool,
     pt_vm_sysread_int32,
 };
 
@@ -67,6 +85,13 @@ void VM_addConstant(uint32_t constant_index) {
         {
             PettyValue num = VM_read_float();
             vm.Constants[constant_index] = num;
+            break;
+        }
+
+        case CONSTANT_BOOL : 
+        {
+            PettyValue val = VM_read_bool();
+            vm.Constants[constant_index] = val;
             break;
         }
     }
@@ -143,6 +168,19 @@ int VM_init(byte* input, const char* file_name)
 //
 //    return v;
 //}
+
+bool VM_read_raw_bool() {
+    bool b = current_code != 0;
+    vm_advance;
+    return b;
+}
+
+PettyValue VM_read_bool() {
+    PettyValue val;
+    val.kind = PT_BOOL;
+    val.as.as_bool = VM_read_raw_bool();
+    return val;
+}
 
 float32_t VM_read_raw_float() {
     uint8_t bytes[4];
@@ -282,14 +320,36 @@ int VM_Start()
                 break;
             }
 
-            case CAST_FROM_FLOAT32_TO_INT32 : 
+            case JMP : 
             {
-                PettyValue val = vm_pop;
-                val.as.as_int = (int32_t)val.as.as_float;
-                val.kind = PT_INT32;
-                vm_push(val);
+                vm.current_instruction = VM_read_raw_Int();
                 break;
             }
+
+            case JMP_IF_FALSE : 
+            {
+                PettyValue val = vm_pop;
+                int32_t pos = VM_read_raw_Int();
+                if (!val.as.as_bool) 
+                {
+                    vm.current_instruction = pos;
+                }
+                break;
+            }
+
+            case JMP_IF_TRUE : 
+            {
+                PettyValue val = vm_pop;
+                int32_t pos = VM_read_raw_Int();
+                if (val.as.as_bool) 
+                {
+                    vm.current_instruction = pos;
+                }
+                break;
+            }
+
+            _processOpCodeCast(CAST_FROM_FLOAT32_TO_INT32, as_float, as_int, PT_INT32, int32_t)
+            _processOpCodeCast(CAST_FROM_INT32_TO_FLOAT32, as_int, as_float, PT_FLOAT32, float32_t)
 
             _processOpCodeMath(int32_t, as_int, ADD_INT, +, as_int, PT_INT32, int32_t)
             _processOpCodeMath(int32_t, as_int, SUB_INT, -, as_int, PT_INT32, int32_t)
@@ -301,6 +361,12 @@ int VM_Start()
             _processOpCodeMath(float32_t, as_float, DIV_FLOAT, /, as_float, PT_FLOAT32, float32_t)
 
             case HALT : goto vm_end;
+
+            default: 
+            {
+                fprintf(stderr, "VM operations handler error : Unknown operation code (%d)\n", current);
+                exit(5);
+            }
         }
     }
 

@@ -14,5 +14,8 @@ typedef double float64_t;
 typedef unsigned char byte;
 typedef char sbyte;
 
+typedef byte bool;
+#define false (0)
+#define true (1)
 
 #endif

@@ -8,6 +8,7 @@
 typedef enum PettyValueKind : unsigned char {
     PT_INT32,
     PT_FLOAT32,
+    PT_BOOL,
     PT_OBJ_REF,
 } PettyValueKind;
 
@@ -16,6 +17,7 @@ typedef struct PettyValue {
     union {
         int32_t as_int;
         float32_t as_float;
+        bool as_bool;
         PettyObject* as_obj_ref;
     } as;
 } PettyValue;

@@ -31,11 +31,15 @@ typedef enum VM_OpCode : byte {
     SUB_FLOAT = 18,
     MUL_FLOAT = 19,
     DIV_FLOAT = 20,
+    JMP_IF_FALSE = 26,
+    JMP_IF_TRUE = 27,
+    JMP = 28,
 } VM_OpCode;
 
 typedef enum VM_ConstantType {
     CONSTANT_INT = 0,
     CONSTANT_FLOAT = 1,
+    CONSTANT_BOOL = 2,
 } VM_ConstantType;
 
 typedef struct Frame Frame;
@@ -64,6 +68,8 @@ struct VM
 extern int32_t VM_read_raw_Int();
 extern PettyValue VM_read_Int();
 extern float32_t VM_read_raw_float();
+extern PettyValue VM_read_bool();
+extern bool VM_read_raw_bool();
 extern PettyValue VM_read_float();
 extern int VM_init(byte* input, const char* file_name);
 extern int VM_Start();
