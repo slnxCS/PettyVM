@@ -3,3 +3,4 @@ build/
 *.exe
 .vscode/*.log
 .clangd
+compiled.pt
