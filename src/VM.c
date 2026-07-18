@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #define current_code (vm.OpCodes[vm.current_instruction])
 #define vm_advance (vm.current_instruction++)
 #define vm_pop (stack_pop(&vm.stack))
@@ -245,21 +246,25 @@ int VM_Start()
         vm_advance;
         switch (current) {
             case RET : {
-                vm.current_instruction = vm.call_stack[--vm.frame_pointer].return_ip;
+                Frame current_frame = vm.call_stack[--vm.frame_pointer];
+                free(current_frame.locals);
+                vm.current_instruction = current_frame.return_ip;
                 break;
             }
 
             case CALL : {
                 if (vm.frame_pointer >= FRAME_STACK_MAX) 
                 {
-                    fprintf(stderr, "Stack overflow error!");
+                    fprintf(stderr, "Call stack overflow error!");
                     exit(5);
                 }
                 int32_t func_index = VM_read_raw_Int();
                 int32_t func_arity = VM_read_raw_Int();
                 Frame frame;
                 frame.return_ip = vm.current_instruction;
-                frame.stack_ptr_index = vm.stack.top_index - func_arity;
+                frame.stack_ptr_index = vm.stack.top_index;
+                frame.locals = NULL;
+                frame.arity = func_arity;
                 vm.call_stack[vm.frame_pointer++] = frame;
                 vm.current_instruction = vm.Functions[func_index];
                 break;
@@ -268,9 +273,9 @@ int VM_Start()
             case RESERVE_LOCAL : 
             {
                 int32_t count = VM_read_raw_Int();
-                for (int i = 0; i < count; i++) {
-                    PettyValue val;
-                    vm_push(val);
+                vm.call_stack[vm.frame_pointer - 1].locals = malloc(sizeof(PettyValue) * count);
+                for (int i = 0; i < vm.call_stack[vm.frame_pointer - 1].arity; i++) {
+                    vm.call_stack[vm.frame_pointer - 1].locals[i] = vm_pop;
                 }
                 break;
             }
@@ -302,14 +307,15 @@ int VM_Start()
             {  
                 int32_t index = VM_read_raw_Int();
                 PettyValue obj = vm_pop;
-                vm.stack.ptr[vm.call_stack[vm.frame_pointer - 1].stack_ptr_index + index] = obj;
+                //vm.stack.ptr[vm.call_stack[vm.frame_pointer - 1].stack_ptr_index + index] = obj;
+                vm.call_stack[vm.frame_pointer - 1].locals[index] = obj;
                 break;
             }
 
             case LOAD_LOCAL : 
             {  
                 int32_t index = VM_read_raw_Int();
-                vm_push(vm.stack.ptr[vm.call_stack[vm.frame_pointer - 1].stack_ptr_index + index]);
+                vm_push(vm.call_stack[vm.frame_pointer - 1].locals[index]);
                 break;
             }
 
@@ -351,6 +357,7 @@ int VM_Start()
             _processOpCodeCast(CAST_FROM_FLOAT32_TO_INT32, as_float, as_int, PT_INT32, int32_t)
             _processOpCodeCast(CAST_FROM_INT32_TO_FLOAT32, as_int, as_float, PT_FLOAT32, float32_t)
 
+            _processOpCodeMath(int32_t, as_int, INT_EQ, ==, as_bool, PT_BOOL, int32_t)
             _processOpCodeMath(int32_t, as_int, ADD_INT, +, as_int, PT_INT32, int32_t)
             _processOpCodeMath(int32_t, as_int, SUB_INT, -, as_int, PT_INT32, int32_t)
             _processOpCodeMath(int32_t, as_int, MUL_INT, *, as_int, PT_INT32, int32_t)

@@ -7,7 +7,7 @@
 
 #define BYTECODE_VER 1.2f
 
-#define FRAME_STACK_MAX 1000
+#define FRAME_STACK_MAX 10000
 
 typedef enum VM_OpCode : byte {
     PUSH_CONSTANT = 1,
@@ -34,6 +34,7 @@ typedef enum VM_OpCode : byte {
     JMP_IF_FALSE = 26,
     JMP_IF_TRUE = 27,
     JMP = 28,
+    INT_EQ = 29,
 } VM_OpCode;
 
 typedef enum VM_ConstantType {
@@ -47,6 +48,8 @@ typedef struct Frame Frame;
 struct Frame {
     uint32_t return_ip;
     uint32_t stack_ptr_index;
+    PettyValue* locals;
+    uint32_t arity;
 };
 
 typedef struct VM VM;
