@@ -1,11 +1,11 @@
 #ifndef PT_VAL_H
 #define PT_VAL_H
 
-#include "PettyObject.h"
-#include "types.h"
+#include "./Objects/PettyObject.h"
+#include "../types.h"
 
 
-typedef enum PettyValueKind : unsigned char {
+typedef enum PettyValueKind : byte {
     PT_INT32,
     PT_FLOAT32,
     PT_BOOL,

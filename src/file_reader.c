@@ -13,7 +13,6 @@ char* read_file(char* fname) {
         fprintf(stderr,"File '%s' does not exist\n", fname);
         exit(1);
     }
-
     fseek(f, 0, SEEK_END);
     uint32_t file_lenght = ftell(f);
     rewind(f);

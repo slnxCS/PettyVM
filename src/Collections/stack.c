@@ -1,6 +1,4 @@
 #include "stack.h"
-#include <bits/types/error_t.h>
-#include <linux/limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 

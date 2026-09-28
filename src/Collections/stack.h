@@ -1,7 +1,7 @@
 #ifndef STACK_H
 #define STACK_H
 
-#include "../PettyValue.h"
+#include "../Value/PettyValue.h"
 
 typedef struct stack {
     int capacity;

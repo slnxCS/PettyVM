@@ -1,13 +1,17 @@
 #ifndef VM_H
 #define VM_H
 
-#include "PettyValue.h"
-#include "types.h"
-#include "Collections/stack.h"
+#include "../Value/Objects/PettyClass.h"
+#include "../Value/Objects/PettyObject.h"
+#include "../Value/PettyValue.h"
+#include "../types.h"
+#include "../Collections/stack.h"
 
-#define BYTECODE_VER 1.2f
+#define BYTECODE_VER (1.35f)
 
-#define FRAME_STACK_MAX 10000
+#define FRAME_STACK_MAX (100)
+#define HEAP_MEMORY_OBJ_COUNT (128)
+#define HEAP_GET_ALLOC_COUNT_BYTES (HEAP_MEMORY_OBJ_COUNT * sizeof(PettyObject))
 
 typedef enum VM_OpCode : byte {
     PUSH_CONSTANT = 1,
@@ -66,15 +70,20 @@ struct VM
     int* Functions;
     Frame call_stack[FRAME_STACK_MAX];
     int32_t frame_pointer;
+    uint64_t heap_size;
+    PettyObject** heap;
+    PettyClass* classes;
 };
 
-extern int32_t VM_read_raw_Int();
-extern PettyValue VM_read_Int();
-extern float32_t VM_read_raw_float();
-extern PettyValue VM_read_bool();
-extern bool VM_read_raw_bool();
-extern PettyValue VM_read_float();
-extern int VM_init(byte* input, const char* file_name);
-extern int VM_Start();
+extern int32_t VM_read_raw_Int(VM* vm);
+extern PettyValue VM_read_Int(VM* vm);
+extern float32_t VM_read_raw_float(VM* vm);
+extern PettyValue VM_read_bool(VM* vm);
+extern bool VM_read_raw_bool(VM* vm);
+extern PettyValue VM_read_float(VM* vm);
+extern void VM_read_raw_string(VM* vm, char* buffer, uint32_t length);
+extern int VM_init(VM* vm, byte* input, const char* file_name);
+extern int VM_Start(VM* vm);
+extern int VM_Free(VM* vm);
 
 #endif // VM_H

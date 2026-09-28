@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -O2 -g -Iinclude
+CFLAGS = -Wall -Wextra -std=c11 -Og -g -Iinclude
 LDFLAGS = -lm
 
 BUILD_DIR = build
@@ -19,7 +19,7 @@ $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-clean:
+clear: 
 	rm -rf $(BUILD_DIR)
 
 run: $(TARGET)
