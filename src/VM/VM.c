@@ -9,7 +9,7 @@
 
 #define current_code(vm) (vm->OpCodes[vm->current_instruction])
 #define vm_advance(vm) (vm->current_instruction++)
-#define vm_advance_n(vm, len) ( vm->current_instruction+= len; )
+#define vm_advance_n(vm, len) vm->current_instruction+= len;
 #define vm_pop(vm) (stack_pop(&vm->stack))
 #define vm_push(vm, obj) stack_push(&(vm->stack), obj)
 #define _processOpCodeMath(vm, type, typeAs, opCode, operator, returnTypeAs, returnTypeKind, typeCast) \
@@ -202,15 +202,9 @@ PettyValue VM_read_bool(VM* vm) {
 }
 
 float32_t VM_read_raw_float(VM* vm) {
-    uint8_t bytes[4];
-    for (int i = 0; i < 4; i++) {
-        bytes[i] = (uint8_t)current_code(vm);
-        vm_advance(vm);
-    }
-
     float32_t num;
-
-    memcpy(&num, bytes, sizeof(float32_t));
+    memcpy(&num, vm->OpCodes + vm->current_instruction, 4);
+    vm_advance_n(vm, 4);
     return num;
 }
 
@@ -222,22 +216,17 @@ PettyValue VM_read_float(VM* vm) {
     return val;
 }
 
-int32_t VM_read_raw_Int(VM* vm) {
-    int32_t v = 0;
-
-    for (int i = 0; i < 4; i++) 
-    {
-        v |= ((uint8_t)current_code(vm)) << (8 * i);
-        vm_advance(vm);
-    }
-
-    return v;
-}
-
 void VM_read_raw_string(VM* vm, char* buffer, uint32_t length) {
     for (uint32_t i = 0; i < length; i++, vm_advance(vm)) {
         buffer[i] = (char)current_code(vm);
     }
+}
+
+int32_t VM_read_raw_Int(VM* vm) {
+    int32_t val;
+    memcpy(&val, vm->OpCodes + vm->current_instruction, 4);
+    vm_advance_n(vm, 4);
+    return val;
 }
 
 PettyValue VM_read_Int(VM* vm) {
