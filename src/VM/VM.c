@@ -114,7 +114,7 @@ int VM_initHeap(VM* vm) {
 }
 
 int VM_initClasses(VM* vm, uint32_t lenght) {
-    for (int i = 0; i < lenght; i++) {
+    for (uint32_t i = 0; i < lenght; i++) {
         PettyClass* _class = &(vm->classes[i]);
         _class->NameLength = VM_read_raw_Int(vm) + 1;
         _class->Name = malloc(_class->NameLength);
@@ -145,7 +145,7 @@ int VM_init(VM* vm, byte* input, const char* file_name)
     if (memcmp(magic, "[PTVM]", 6) != 0) 
     {
         fprintf(stderr, "File '%s' is not PettyLang bytecode. Terminating VM\n", file_name);
-        exit(1);
+        exit(7);
     }
     for (int i = 0; i < 6; i++)
         vm_advance(vm);
@@ -162,11 +162,7 @@ int VM_init(VM* vm, byte* input, const char* file_name)
     vm->Constants = malloc(sizeof(PettyValue) * vm->ConstantsCount);
     for (uint32_t i = 0; i < vm->ConstantsCount; i++) 
         VM_addConstant(vm, i);
-    int32_t globals_c = VM_read_raw_Int(vm);
-    vm->Globals = malloc(sizeof(PettyValue) * globals_c);
     vm->stack = stack_init();
-    VM_Start(vm);
-    vm_advance(vm);
     uint32_t funcs_c = VM_read_raw_Int(vm);
     vm->Functions = malloc(sizeof(int32_t) * funcs_c);
     VM_initFuncs(vm, funcs_c);
@@ -174,6 +170,11 @@ int VM_init(VM* vm, byte* input, const char* file_name)
     vm->classes_count = classes_c;
     vm->classes = malloc(sizeof(PettyClass) * classes_c);
     VM_initClasses(vm, classes_c);
+
+    int32_t globals_c = VM_read_raw_Int(vm);
+    vm->Globals = malloc(sizeof(PettyValue) * globals_c);
+    VM_Start(vm);
+    vm_advance(vm);
     return 0;
 }
 
@@ -407,7 +408,7 @@ int VM_Start(VM* vm)
             default: 
             {
                 fprintf(stderr, "VM operations handler error : Unknown operation code (%d)\n", current);
-                exit(5);
+                exit(6);
             }
         }
     }
