@@ -126,6 +126,7 @@ int VM_initClasses(VM* vm, uint32_t lenght) {
         _class->Name[_class->NameLength - 1] = '\0';
         _class->ID = VM_read_raw_Int(vm);
         _class->DerivedID = VM_read_raw_Int(vm);
+        _class->Fields_Count = VM_read_raw_Int(vm);
     }
 
     return 0;

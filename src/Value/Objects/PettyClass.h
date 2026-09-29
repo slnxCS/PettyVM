@@ -6,6 +6,7 @@
 typedef struct PettyClass {
     int32_t ID;
     int32_t DerivedID;
+    uint32_t Fields_Count;
     char* Name;
     uint32_t NameLength;
 } PettyClass;

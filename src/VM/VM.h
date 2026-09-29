@@ -7,7 +7,7 @@
 #include "../types.h"
 #include "../Collections/stack.h"
 
-#define BYTECODE_VER (1.36f)
+#define BYTECODE_VER (1.37f)
 
 #define FRAME_STACK_MAX (100)
 #define HEAP_MEMORY_OBJ_COUNT (128)
