@@ -11,14 +11,14 @@ char* read_file(char* fname) {
     if (!f) 
     {
         fprintf(stderr,"File '%s' does not exist\n", fname);
-        exit(1);
+        exit(3);
     }
     fseek(f, 0, SEEK_END);
     uint32_t file_lenght = ftell(f);
     rewind(f);
     char* buffer = malloc(file_lenght);
     if (!buffer) {
-        fprintf(stderr,"Memory allocation error\n");
+        fprintf(stderr,"Memory allocation error : failed for allocate %d bytes\n", file_lenght);
         exit(1);
     }
 

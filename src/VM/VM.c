@@ -171,6 +171,7 @@ int VM_init(VM* vm, byte* input, const char* file_name)
     vm->Functions = malloc(sizeof(int32_t) * funcs_c);
     VM_initFuncs(vm, funcs_c);
     uint32_t classes_c = VM_read_raw_Int(vm);
+    vm->classes_count = classes_c;
     vm->classes = malloc(sizeof(PettyClass) * classes_c);
     VM_initClasses(vm, classes_c);
     return 0;
@@ -253,7 +254,10 @@ void VM_Free_Heap(VM* vm) {
 }
 
 void VM_Free_ClassTable(VM* vm) {
-
+    for (uint32_t i = 0; i < vm->classes_count; i++) {
+        free(vm->classes[i].Name);
+    }
+    free(vm->classes);
 }
 
 int VM_Free(VM* vm) {
@@ -274,7 +278,9 @@ int VM_Start(VM* vm)
         switch (current) {
             case RET : {
                 Frame current_frame = vm->call_stack[--vm->frame_pointer];
-                free(current_frame.locals);
+                PettyValue res = vm_pop(vm);
+                vm->stack.top_index = current_frame.stack_ptr_index;
+                vm_push(vm, res);
                 vm->current_instruction = current_frame.return_ip;
                 break;
             }
@@ -289,8 +295,7 @@ int VM_Start(VM* vm)
                 int32_t func_arity = VM_read_raw_Int(vm);
                 Frame frame;
                 frame.return_ip = vm->current_instruction;
-                frame.stack_ptr_index = vm->stack.top_index;
-                frame.locals = NULL;
+                frame.stack_ptr_index = vm->stack.top_index - func_arity;
                 frame.arity = func_arity;
                 vm->call_stack[vm->frame_pointer++] = frame;
                 vm->current_instruction = vm->Functions[func_index];
@@ -299,11 +304,9 @@ int VM_Start(VM* vm)
 
             case RESERVE_LOCAL : 
             {
-                int32_t count = VM_read_raw_Int(vm);
-                vm->call_stack[vm->frame_pointer - 1].locals = malloc(sizeof(PettyValue) * count);
-                for (uint32_t i = 0; i < vm->call_stack[vm->frame_pointer - 1].arity; i++) {
-                    vm->call_stack[vm->frame_pointer - 1].locals[i] = vm_pop(vm);
-                }
+                int32_t count = VM_read_raw_Int(vm); 
+                int32_t locals_count = count - vm->call_stack[vm->frame_pointer - 1].arity;
+                vm->stack.top_index += locals_count;            
                 break;
             }
 
@@ -334,15 +337,16 @@ int VM_Start(VM* vm)
             {  
                 int32_t index = VM_read_raw_Int(vm);
                 PettyValue obj = vm_pop(vm);
-                //vm.stack.ptr[vm.call_stack[vm.frame_pointer - 1].stack_ptr_index + index] = obj;
-                vm->call_stack[vm->frame_pointer - 1].locals[index] = obj;
+                vm->stack.ptr[vm->call_stack[vm->frame_pointer - 1].stack_ptr_index + index] = obj;
+                //vm->call_stack[vm->frame_pointer - 1].locals[index] = obj;
                 break;
             }
 
             case LOAD_LOCAL : 
             {  
                 int32_t index = VM_read_raw_Int(vm);
-                vm_push(vm, vm->call_stack[vm->frame_pointer - 1].locals[index]);
+                vm_push(vm, vm->stack.ptr[vm->call_stack[vm->frame_pointer - 1].stack_ptr_index + index]);
+
                 break;
             }
 

@@ -52,7 +52,6 @@ typedef struct Frame Frame;
 struct Frame {
     uint32_t return_ip;
     uint32_t stack_ptr_index;
-    PettyValue* locals;
     uint32_t arity;
 };
 
@@ -72,6 +71,7 @@ struct VM
     int32_t frame_pointer;
     uint64_t heap_size;
     PettyObject** heap;
+    uint32_t classes_count;
     PettyClass* classes;
 };
 
