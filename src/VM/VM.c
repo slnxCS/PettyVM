@@ -278,9 +278,13 @@ int VM_Start(VM* vm)
         switch (current) {
             case RET : {
                 Frame current_frame = vm->call_stack[--vm->frame_pointer];
-                PettyValue res = vm_pop(vm);
-                vm->stack.top_index = current_frame.stack_ptr_index;
-                vm_push(vm, res);
+                if (vm->stack.top_index > current_frame.stack_ptr_index) {
+                    PettyValue res = vm_pop(vm);
+                    vm->stack.top_index = current_frame.stack_ptr_index;
+                    vm_push(vm, res);
+                }
+                else 
+                    vm->stack.top_index = current_frame.stack_ptr_index;
                 vm->current_instruction = current_frame.return_ip;
                 break;
             }

@@ -51,7 +51,7 @@ typedef struct Frame Frame;
 
 struct Frame {
     uint32_t return_ip;
-    uint32_t stack_ptr_index;
+    int32_t stack_ptr_index;
     uint32_t arity;
 };
 
