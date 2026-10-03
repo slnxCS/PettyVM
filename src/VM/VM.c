@@ -116,17 +116,29 @@ int VM_initHeap(VM* vm) {
 int VM_initClasses(VM* vm, uint32_t lenght) {
     for (uint32_t i = 0; i < lenght; i++) {
         PettyClass* _class = &(vm->classes[i]);
-        _class->NameLength = VM_read_raw_Int(vm) + 1;
-        _class->Name = malloc(_class->NameLength);
+        _class->NameLength = VM_read_raw_Int(vm);
+        _class->Name = malloc(_class->NameLength + 1);
         if (!_class->Name) {
-            fprintf(stderr, "Malloc error : failed to allocate %d bytes\n", _class->NameLength);
+            fprintf(stderr, "Malloc error : failed to allocate %d bytes\n", _class->NameLength + 1);
             exit(1);
         }
-        VM_read_raw_string(vm, _class->Name, _class->NameLength - 1);
-        _class->Name[_class->NameLength - 1] = '\0';
+        VM_read_raw_string(vm, _class->Name, _class->NameLength);
+        _class->Name[_class->NameLength] = '\0';
         _class->ID = VM_read_raw_Int(vm);
         _class->DerivedID = VM_read_raw_Int(vm);
         _class->Fields_Count = VM_read_raw_Int(vm);
+        uint32_t vmethods_c = VM_read_raw_Int(vm);
+        _class->VirtualMethodsTable = malloc(vmethods_c * 8);
+        if (!_class->VirtualMethodsTable) {
+            fprintf(stderr, "Malloc error : failed to allocate %d bytes\n", vmethods_c * 8);
+            exit(1);
+        }
+        for (uint32_t j = 0; j < vmethods_c; j++) {
+            uint64_t func_index = vm->current_instruction;
+            _class->VirtualMethodsTable[j] = func_index;
+            while(current_code(vm) != HALT) vm_advance(vm);
+            vm_advance(vm);
+        }
     }
 
     return 0;
@@ -148,12 +160,12 @@ int VM_init(VM* vm, byte* input, const char* file_name)
         fprintf(stderr, "File '%s' is not PettyLang bytecode. Terminating VM\n", file_name);
         exit(7);
     }
-    for (int i = 0; i < 6; i++)
-        vm_advance(vm);
+    vm_advance_n(vm, 6);
     float32_t file_byteCodeVersion = VM_read_raw_float(vm);
     if (file_byteCodeVersion != BYTECODE_VER) {
-        fprintf(stderr, "The bytecode version for this file is outdated or newer. Current VM bytecode version : %g. File bytecode version : %g. \n" 
-            "Please recompile the file to match the current bytecode version of the vm, or update the vm for your file version\n", BYTECODE_VER, file_byteCodeVersion);
+        fprintf(stderr, "The bytecode version for this file is %s. Current VM bytecode version : %g. File bytecode version : %g. \n" 
+            "Please recompile the file to match the current bytecode version of the vm, or update the vm for your file version\n", 
+                file_byteCodeVersion > BYTECODE_VER ? "newer" : "outdated",BYTECODE_VER, file_byteCodeVersion);
         exit(2);
     }
 
@@ -249,7 +261,7 @@ PettyValue VM_read_Int(VM* vm) {
 
 void VM_Free_Heap(VM* vm) {
     for (uint64_t i = 0; i < vm->heap_size; i++) {
-        free(vm->heap[i]);
+        if (vm->heap[i]) free(vm->heap[i]);
     }
 
     free(vm->heap);
@@ -272,6 +284,14 @@ int VM_Free(VM* vm) {
     return 0;
 }
 
+uint64_t find_free_memory_heap(PettyObject** heap, uint64_t heap_len) {
+    for (uint64_t i = 0; i < heap_len; i++) {
+        if (heap[i] == NULL || heap[i]->is_free) return i;
+    }
+
+    return -1;
+}
+
 int VM_Start(VM* vm) 
 {
     while (current_code(vm) != HALT) {
@@ -288,6 +308,24 @@ int VM_Start(VM* vm)
                 else 
                     vm->stack.top_index = current_frame.stack_ptr_index;
                 vm->current_instruction = current_frame.return_ip;
+                break;
+            }
+
+            case CALL_METHOD : {
+                if (vm->frame_pointer >= FRAME_STACK_MAX) 
+                {
+                    fprintf(stderr, "Call stack overflow error!");
+                    exit(5);
+                }
+                PettyObject* instance = vm_pop(vm).as.as_obj_ref;
+                int32_t func_index = VM_read_raw_Int(vm);
+                int32_t func_arity = VM_read_raw_Int(vm);
+                Frame frame;
+                frame.return_ip = vm->current_instruction;
+                frame.stack_ptr_index = vm->stack.top_index - func_arity;
+                frame.arity = func_arity;
+                vm->call_stack[vm->frame_pointer++] = frame;
+                vm->current_instruction = vm->classes[instance->Class_ID].VirtualMethodsTable[func_index];
                 break;
             }
 
@@ -331,6 +369,35 @@ int VM_Start(VM* vm)
                 break;
             }
 
+            case ALLOC_OBJ : 
+            {
+                uint32_t class_id = VM_read_raw_Int(vm);
+                uint64_t free_index = find_free_memory_heap(vm->heap, vm->heap_size);
+                if (free_index == -1) {
+                    fprintf(stderr, "EndMemory error : cannot find free place to allocate new object in heap...\n Terminating VM\n");
+                    exit(8);
+                }
+                PettyObject* obj = vm->heap[free_index];
+
+                if (!obj) {
+                    obj = malloc(sizeof(PettyObject));
+                    vm->heap[free_index] = obj;
+                }
+
+                obj->is_free = false;
+                obj->Class_ID = class_id;
+                obj->Fields_Count = vm->classes[class_id].Fields_Count;
+                obj->Fields = malloc(sizeof(PettyValue) * obj->Fields_Count);
+
+                PettyValue val;
+
+                val.kind = PT_OBJ_REF;
+                val.as.as_obj_ref = obj;
+
+                vm_push(vm, val);
+                break;
+            }
+
             case STORE_GLOBAL : 
             {
                 int32_t index = VM_read_raw_Int(vm);
@@ -352,7 +419,6 @@ int VM_Start(VM* vm)
             {  
                 int32_t index = VM_read_raw_Int(vm);
                 vm_push(vm, vm->stack.ptr[vm->call_stack[vm->frame_pointer - 1].stack_ptr_index + index]);
-
                 break;
             }
 

@@ -7,7 +7,7 @@
 #include "../types.h"
 #include "../Collections/stack.h"
 
-#define BYTECODE_VER (1.37f)
+#define BYTECODE_VER (1.38f)
 
 #define FRAME_STACK_MAX (100)
 #define HEAP_MEMORY_OBJ_COUNT (128)
@@ -39,6 +39,9 @@ typedef enum VM_OpCode : byte {
     JMP_IF_TRUE = 27,
     JMP = 28,
     INT_EQ = 29,
+
+    ALLOC_OBJ = 25,
+    CALL_METHOD = 30,
 } VM_OpCode;
 
 typedef enum VM_ConstantType {
@@ -60,13 +63,13 @@ typedef struct VM VM;
 struct VM 
 {
     byte* OpCodes;
-    int current_instruction;
+    uint64_t current_instruction;
     stack stack;
     PettyValue* Globals;
     //uint64_t GlobalsLen;
     PettyValue* Constants;
     uint32_t ConstantsCount;
-    int* Functions;
+    uint64_t* Functions;
     Frame call_stack[FRAME_STACK_MAX];
     int32_t frame_pointer;
     uint64_t heap_size;

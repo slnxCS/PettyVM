@@ -9,6 +9,7 @@ typedef struct PettyClass {
     uint32_t Fields_Count;
     char* Name;
     uint32_t NameLength;
+    uint64_t* VirtualMethodsTable;
 } PettyClass;
 
 #endif // PETTYCLASS_H
