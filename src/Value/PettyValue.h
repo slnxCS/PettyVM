@@ -18,7 +18,7 @@ typedef struct PettyValue {
         int32_t as_int;
         float32_t as_float;
         bool as_bool;
-        PettyObject* as_obj_ref;
+        PettyObject* as_obj_ptr;
     } as;
 } PettyValue;
 

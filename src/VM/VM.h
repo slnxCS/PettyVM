@@ -7,11 +7,11 @@
 #include "../types.h"
 #include "../Collections/stack.h"
 
-#define BYTECODE_VER (1.38f)
+#define BYTECODE_VER (1.39f)
 
 #define FRAME_STACK_MAX (100)
 #define HEAP_MEMORY_OBJ_COUNT (128)
-#define HEAP_GET_ALLOC_COUNT_BYTES (HEAP_MEMORY_OBJ_COUNT * sizeof(PettyObject))
+#define HEAP_GET_ALLOC_COUNT_BYTES (HEAP_MEMORY_OBJ_COUNT * sizeof(PettyObject*))
 
 typedef enum VM_OpCode : byte {
     PUSH_CONSTANT = 1,
@@ -42,6 +42,8 @@ typedef enum VM_OpCode : byte {
 
     ALLOC_OBJ = 25,
     CALL_METHOD = 30,
+    LOAD_FIELD = 31,
+    STORE_FIELD = 32,
 } VM_OpCode;
 
 typedef enum VM_ConstantType {

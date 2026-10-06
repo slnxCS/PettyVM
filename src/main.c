@@ -1,7 +1,7 @@
-#include <ctype.h>
-#include <sys/types.h>
+#include "types.h"
 #include "VM/VM.h"
 #include "file_reader.h"
+#include <stdlib.h>
 
 #define DEBUG
 

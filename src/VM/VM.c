@@ -39,7 +39,7 @@ typedef void(*PettySysFunc)(VM* vm, int32_t arity);
 void pt_vm_sysprint_int32(VM* vm, int32_t arity) {
     //for (int i = 0; i < arity; i++) 
     {
-        int32_t num = stack_pop(&(vm->stack)).as.as_int;
+        volatile int32_t num = stack_pop(&(vm->stack)).as.as_int;
         printf("%d\n", num);
     }
 }
@@ -317,7 +317,7 @@ int VM_Start(VM* vm)
                     fprintf(stderr, "Call stack overflow error!");
                     exit(5);
                 }
-                PettyObject* instance = vm_pop(vm).as.as_obj_ref;
+                PettyObject* instance = vm_pop(vm).as.as_obj_ptr;
                 int32_t func_index = VM_read_raw_Int(vm);
                 int32_t func_arity = VM_read_raw_Int(vm);
                 Frame frame;
@@ -392,26 +392,41 @@ int VM_Start(VM* vm)
                 PettyValue val;
 
                 val.kind = PT_OBJ_REF;
-                val.as.as_obj_ref = obj;
+                val.as.as_obj_ptr = obj;
 
                 vm_push(vm, val);
+                break;
+            }
+
+            case LOAD_FIELD : {
+                PettyObject* obj = vm_pop(vm).as.as_obj_ptr;
+                uint32_t index = VM_read_raw_Int(vm);
+                vm_push(vm, obj->Fields[index]);
+                break;
+            }
+
+            case STORE_FIELD : {
+                PettyObject* obj = vm_pop(vm).as.as_obj_ptr;
+                PettyValue val = vm_pop(vm);
+                uint32_t field_index = VM_read_raw_Int(vm);
+                obj->Fields[field_index] = val;
+
                 break;
             }
 
             case STORE_GLOBAL : 
             {
                 int32_t index = VM_read_raw_Int(vm);
-                PettyValue obj = stack_pop(&(vm->stack));
-                vm->Globals[index] = obj;
+                PettyValue val = vm_pop(vm);
+                vm->Globals[index] = val;
                 break;
             }
 
             case STORE_LOCAL : 
             {  
                 int32_t index = VM_read_raw_Int(vm);
-                PettyValue obj = vm_pop(vm);
-                vm->stack.ptr[vm->call_stack[vm->frame_pointer - 1].stack_ptr_index + index] = obj;
-                //vm->call_stack[vm->frame_pointer - 1].locals[index] = obj;
+                PettyValue val = vm_pop(vm);
+                vm->stack.ptr[vm->call_stack[vm->frame_pointer - 1].stack_ptr_index + index] = val;
                 break;
             }
 

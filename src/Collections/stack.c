@@ -49,6 +49,6 @@ PettyValue stack_pop(stack* s)
     }
 
     s->top_index--;
-    PettyValue val = s->ptr[s->top_index];
+    volatile PettyValue val = s->ptr[s->top_index];
     return val;
 }
