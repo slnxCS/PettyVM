@@ -12,6 +12,7 @@
 #define vm_advance_n(vm, len) vm->current_instruction+= len;
 #define vm_pop(vm) (stack_pop(&vm->stack))
 #define vm_push(vm, obj) stack_push(&(vm->stack), obj)
+#define vm_peek(vm) (stack_peek((&(vm->stack))))
 #define _processOpCodeMath(vm, type, typeAs, opCode, operator, returnTypeAs, returnTypeKind, typeCast) \
 case opCode : \
 {\
@@ -317,7 +318,8 @@ int VM_Start(VM* vm)
                     fprintf(stderr, "Call stack overflow error!");
                     exit(5);
                 }
-                PettyObject* instance = vm_pop(vm).as.as_obj_ptr;
+                PettyObject* instance = vm_peek(vm).as.as_obj_ptr;
+
                 int32_t func_index = VM_read_raw_Int(vm);
                 int32_t func_arity = VM_read_raw_Int(vm);
                 Frame frame;
@@ -391,7 +393,7 @@ int VM_Start(VM* vm)
 
                 PettyValue val;
 
-                val.kind = PT_OBJ_REF;
+                val.kind = PT_OBJ_PTR;
                 val.as.as_obj_ptr = obj;
 
                 vm_push(vm, val);

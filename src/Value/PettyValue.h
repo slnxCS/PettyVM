@@ -9,7 +9,7 @@ typedef enum PettyValueKind : byte {
     PT_INT32,
     PT_FLOAT32,
     PT_BOOL,
-    PT_OBJ_REF,
+    PT_OBJ_PTR,
 } PettyValueKind;
 
 typedef struct PettyValue {
