@@ -54,7 +54,16 @@ void pt_vm_sysread_int32(VM* vm, int32_t arity) {
     PettyValue val;
     val.kind = PT_INT32;
     scanf("%d", &(val.as.as_int));
-    stack_push(&vm->stack, val);
+    vm_push(vm, val);
+}
+
+void pt_vm_sysrandom(VM* vm, int32_t) {
+    int32_t max = vm_pop(vm).as.as_int;
+    int32_t min = vm_pop(vm).as.as_int;
+    PettyValue val;
+    val.kind = PT_INT32;
+    val.as.as_int = min + rand() % (max - min + 1);
+    vm_push(vm, val);
 }
 
 void pt_vm_sysprint_bool(VM* vm, int32_t arity) {
@@ -67,6 +76,7 @@ PettySysFunc vm_sys_funcs[] = {
     pt_vm_sysprint_float32,
     pt_vm_sysprint_bool,
     pt_vm_sysread_int32,
+    pt_vm_sysrandom,
 };
 
 void VM_addConstant(VM* vm, uint32_t constant_index) {
@@ -260,9 +270,21 @@ PettyValue VM_read_Int(VM* vm) {
     return val;
 }
 
+void VM_Free_Obj(PettyObject* obj) {
+    if (!obj) return;
+
+    for (uint32_t i = 0; i < obj->Fields_Count; i++) {
+        if (obj->Fields[i].kind == PT_OBJ_PTR) 
+            VM_Free_Obj(obj->Fields[i].as.as_obj_ptr);
+    }
+
+    free(obj->Fields);
+    free(obj);
+}
+
 void VM_Free_Heap(VM* vm) {
     for (uint64_t i = 0; i < vm->heap_size; i++) {
-        if (vm->heap[i]) free(vm->heap[i]);
+        if (vm->heap[i]) VM_Free_Obj(vm->heap[i]);
     }
 
     free(vm->heap);
@@ -289,7 +311,6 @@ uint64_t find_free_memory_heap(PettyObject** heap, uint64_t heap_len) {
     for (uint64_t i = 0; i < heap_len; i++) {
         if (heap[i] == NULL || heap[i]->is_free) return i;
     }
-
     return -1;
 }
 
@@ -301,7 +322,7 @@ int VM_Start(VM* vm)
         switch (current) {
             case RET : {
                 Frame current_frame = vm->call_stack[--vm->frame_pointer];
-                if (vm->stack.top_index > current_frame.stack_ptr_index) {
+                if (vm->stack.top_index > current_frame.stack_ptr_index + current_frame.arity + current_frame.locals_count) {
                     PettyValue res = vm_pop(vm);
                     vm->stack.top_index = current_frame.stack_ptr_index;
                     vm_push(vm, res);
@@ -318,6 +339,7 @@ int VM_Start(VM* vm)
                     fprintf(stderr, "Call stack overflow error!");
                     exit(5);
                 }
+                
                 PettyObject* instance = vm_peek(vm).as.as_obj_ptr;
 
                 int32_t func_index = VM_read_raw_Int(vm);
@@ -350,9 +372,10 @@ int VM_Start(VM* vm)
 
             case RESERVE_LOCAL : 
             {
-                int32_t count = VM_read_raw_Int(vm); 
+                int32_t count = VM_read_raw_Int(vm);
                 int32_t locals_count = count - vm->call_stack[vm->frame_pointer - 1].arity;
-                vm->stack.top_index += locals_count;            
+                vm->call_stack[vm->frame_pointer - 1].locals_count = locals_count;
+                vm->stack.top_index += locals_count;
                 break;
             }
 
@@ -396,7 +419,7 @@ int VM_Start(VM* vm)
                 val.kind = PT_OBJ_PTR;
                 val.as.as_obj_ptr = obj;
 
-                vm_push(vm, val);
+                vm_push(vm, val); 
                 break;
             }
 
@@ -408,11 +431,10 @@ int VM_Start(VM* vm)
             }
 
             case STORE_FIELD : {
-                PettyObject* obj = vm_pop(vm).as.as_obj_ptr;
+                PettyValue obj = vm_pop(vm);
                 PettyValue val = vm_pop(vm);
                 uint32_t field_index = VM_read_raw_Int(vm);
-                obj->Fields[field_index] = val;
-
+                (obj.as.as_obj_ptr)->Fields[field_index] = val;
                 break;
             }
 

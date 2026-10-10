@@ -58,6 +58,7 @@ struct Frame {
     uint32_t return_ip;
     int32_t stack_ptr_index;
     uint32_t arity;
+    uint32_t locals_count;
 };
 
 typedef struct VM VM;

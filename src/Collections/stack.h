@@ -4,8 +4,8 @@
 #include "../Value/PettyValue.h"
 
 typedef struct stack {
-    int capacity;
-    int top_index;
+    int32_t capacity;
+    uint64_t top_index;
     PettyValue* ptr;
 } stack;
 
