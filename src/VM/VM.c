@@ -339,11 +339,10 @@ int VM_Start(VM* vm)
                     fprintf(stderr, "Call stack overflow error!");
                     exit(5);
                 }
-                
-                PettyObject* instance = vm_peek(vm).as.as_obj_ptr;
 
                 int32_t func_index = VM_read_raw_Int(vm);
                 int32_t func_arity = VM_read_raw_Int(vm);
+                PettyObject* instance = vm->stack.ptr[vm->stack.top_index - func_arity].as.as_obj_ptr;
                 Frame frame;
                 frame.return_ip = vm->current_instruction;
                 frame.stack_ptr_index = vm->stack.top_index - func_arity;
