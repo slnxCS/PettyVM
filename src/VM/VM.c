@@ -26,6 +26,17 @@ case opCode : \
     break;\
 }
 
+#define _processOpCodeMathUnary(vm, type, typeAs, opCode, operator, returnTypeAs, returnTypeKind, typeCast) \
+case opCode : \
+{\
+    PettyValue pt_val;\
+    type right = vm_pop(vm).as.typeAs;\
+    pt_val.kind = returnTypeKind;\
+    pt_val.as.returnTypeAs = operator((typeCast)right);\
+    stack_push(&vm->stack, pt_val);\
+    break;\
+}
+
 #define _processOpCodeCast(vm, opCode, fromAsType, toAsType, castKind, castType) \
 case opCode : \
 {\
@@ -558,6 +569,7 @@ int VM_Start(VM* vm)
             _processOpCodeCast(vm, CAST_FROM_INT32_TO_FLOAT32, as_int, as_float, PT_FLOAT32, float32_t)
 
             _processOpCodeMath(vm, int32_t, as_int, INT_EQ, ==, as_bool, PT_BOOL, int32_t)
+            _processOpCodeMath(vm, int32_t, as_int, INT_NEQ, !=, as_bool, PT_BOOL, int32_t)
             _processOpCodeMath(vm, int32_t, as_int, INT_LE, <, as_bool, PT_BOOL, int32_t)
             _processOpCodeMath(vm, int32_t, as_int, INT_GE, >, as_bool, PT_BOOL, int32_t)
             _processOpCodeMath(vm, int32_t, as_int, INT_LEQ, <=, as_bool, PT_BOOL, int32_t)
@@ -566,7 +578,10 @@ int VM_Start(VM* vm)
             _processOpCodeMath(vm, int32_t, as_int, SUB_INT, -, as_int, PT_INT32, int32_t)
             _processOpCodeMath(vm, int32_t, as_int, MUL_INT, *, as_int, PT_INT32, int32_t)
             _processOpCodeMath(vm, int32_t, as_int, DIV_INT, /, as_float, PT_FLOAT32, float32_t)
+            _processOpCodeMathUnary(vm, int32_t, as_int, INT_NEG, -, as_int, PT_INT32, int32_t);
+
             _processOpCodeMath(vm, float32_t, as_float, FLOAT_EQ, ==, as_bool, PT_BOOL, float32_t);
+            _processOpCodeMath(vm, float32_t, as_float, FLOAT_NEQ, !=, as_bool, PT_BOOL, float32_t);
             _processOpCodeMath(vm, float32_t, as_float, FLOAT_LE, <, as_bool, PT_BOOL, float32_t)
             _processOpCodeMath(vm, float32_t, as_float, FLOAT_GE, >, as_bool, PT_BOOL, float32_t)
             _processOpCodeMath(vm, float32_t, as_float, FLOAT_LEQ, <=, as_bool, PT_BOOL, float32_t)
@@ -575,6 +590,12 @@ int VM_Start(VM* vm)
             _processOpCodeMath(vm, float32_t, as_float, SUB_FLOAT, -, as_float, PT_FLOAT32, float32_t)
             _processOpCodeMath(vm, float32_t, as_float, MUL_FLOAT, *, as_float, PT_FLOAT32, float32_t)
             _processOpCodeMath(vm, float32_t, as_float, DIV_FLOAT, /, as_float, PT_FLOAT32, float32_t)
+
+            _processOpCodeMath(vm, bool, as_bool, BOOL_EQ, ==, as_bool, PT_BOOL, bool);
+            _processOpCodeMath(vm, bool, as_bool, BOOL_NEQ, !=, as_bool, PT_BOOL, bool);
+            _processOpCodeMath(vm, bool, as_bool, BOOL_AND, &&, as_bool, PT_BOOL, bool);
+            _processOpCodeMath(vm, bool, as_bool, BOOL_OR, || , as_bool, PT_BOOL, bool);
+            _processOpCodeMathUnary(vm, bool, as_bool, BOOL_NOT, !, as_bool, PT_BOOL, bool);
 
             case HALT : goto vm_end;
 
