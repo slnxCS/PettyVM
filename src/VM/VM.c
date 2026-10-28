@@ -590,6 +590,7 @@ int VM_Start(VM* vm)
             _processOpCodeMath(vm, float32_t, as_float, SUB_FLOAT, -, as_float, PT_FLOAT32, float32_t)
             _processOpCodeMath(vm, float32_t, as_float, MUL_FLOAT, *, as_float, PT_FLOAT32, float32_t)
             _processOpCodeMath(vm, float32_t, as_float, DIV_FLOAT, /, as_float, PT_FLOAT32, float32_t)
+            _processOpCodeMathUnary(vm, float32_t, as_float, FLOAT_NEG, -, as_float, PT_FLOAT32, float32_t);
 
             _processOpCodeMath(vm, bool, as_bool, BOOL_EQ, ==, as_bool, PT_BOOL, bool);
             _processOpCodeMath(vm, bool, as_bool, BOOL_NEQ, !=, as_bool, PT_BOOL, bool);
