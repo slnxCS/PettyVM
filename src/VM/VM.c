@@ -2,6 +2,7 @@
 #include "../Collections/stack.h"
 #include "../Value/PettyValue.h"
 #include "../types.h"
+#include "../Value/ArrayTools.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,7 +10,7 @@
 
 #define current_code(vm) (vm->OpCodes[vm->current_instruction])
 #define vm_advance(vm) (vm->current_instruction++)
-#define vm_advance_n(vm, len) vm->current_instruction+= len;
+#define vm_advance_n(vm, len) vm->current_instruction += len;
 #define vm_pop(vm) (stack_pop(&vm->stack))
 #define vm_push(vm, obj) stack_push(&(vm->stack), obj)
 #define vm_peek(vm) (stack_peek((&(vm->stack))))
@@ -71,12 +72,29 @@ void pt_vm_sysprint_bool(VM* vm, int32_t arity) {
     printf("%s\n", value.as.as_bool ? "true" : "false");
 }
 
+void pt_vm_sysarrayget(VM* vm, int32_t arity) {
+    uint32_t index = vm_pop(vm).as.as_int;
+    PettyObject* array = vm_pop(vm).as.as_obj_ptr;
+
+    vm_push(vm, ARRAY_GET(array, index));
+}
+
+void pt_vm_sysarrayset(VM* vm, int32_t arity) {
+    PettyValue val = vm_pop(vm);
+    uint32_t index = vm_pop(vm).as.as_int;
+    PettyObject* array = vm_pop(vm).as.as_obj_ptr;
+
+    ARRAY_SET(array, index, val);
+}
+
 PettySysFunc vm_sys_funcs[] = {
     pt_vm_sysprint_int32,
     pt_vm_sysprint_float32,
     pt_vm_sysprint_bool,
     pt_vm_sysread_int32,
     pt_vm_sysrandom,
+    pt_vm_sysarrayget,
+    pt_vm_sysarrayset,
 };
 
 void VM_addConstant(VM* vm, uint32_t constant_index) {
@@ -108,10 +126,9 @@ void VM_addConstant(VM* vm, uint32_t constant_index) {
 
 void VM_initFuncs(VM* vm, int32_t count) {
     for (int i = 0; i < count; i++) {
+        uint32_t len = VM_read_raw_Int(vm);
         vm->Functions[i] = vm->current_instruction;
-        while (current_code(vm) != HALT)
-            vm_advance(vm);
-        vm_advance(vm);
+        vm_advance_n(vm, len);
     }
 }
 
@@ -145,10 +162,10 @@ int VM_initClasses(VM* vm, uint32_t lenght) {
             exit(1);
         }
         for (uint32_t j = 0; j < vmethods_c; j++) {
+            uint32_t func_len = VM_read_raw_Int(vm);
             uint64_t func_index = vm->current_instruction;
             _class->VirtualMethodsTable[j] = func_index;
-            while(current_code(vm) != HALT) vm_advance(vm);
-            vm_advance(vm);
+            vm_advance_n(vm, func_len);
         }
     }
 
@@ -188,7 +205,7 @@ int VM_init(VM* vm, byte* input, const char* file_name)
         VM_addConstant(vm, i);
     vm->stack = stack_init();
     uint32_t funcs_c = VM_read_raw_Int(vm);
-    vm->Functions = malloc(sizeof(int32_t) * funcs_c);
+    vm->Functions = malloc(sizeof(uint64_t) * funcs_c);
     VM_initFuncs(vm, funcs_c);
     uint32_t classes_c = VM_read_raw_Int(vm);
     vm->classes_count = classes_c;
@@ -273,11 +290,6 @@ PettyValue VM_read_Int(VM* vm) {
 void VM_Free_Obj(PettyObject* obj) {
     if (!obj) return;
 
-    for (uint32_t i = 0; i < obj->Fields_Count; i++) {
-        if (obj->Fields[i].kind == PT_OBJ_PTR) 
-            VM_Free_Obj(obj->Fields[i].as.as_obj_ptr);
-    }
-
     free(obj->Fields);
     free(obj);
 }
@@ -293,6 +305,7 @@ void VM_Free_Heap(VM* vm) {
 void VM_Free_ClassTable(VM* vm) {
     for (uint32_t i = 0; i < vm->classes_count; i++) {
         free(vm->classes[i].Name);
+        free(vm->classes[i].VirtualMethodsTable);
     }
     free(vm->classes);
 }
@@ -303,6 +316,8 @@ int VM_Free(VM* vm) {
     free(vm->OpCodes);
     VM_Free_Heap(vm);
     VM_Free_ClassTable(vm);
+    free(vm->stack.ptr);
+    free(vm->Functions);
 
     return 0;
 }
@@ -422,6 +437,50 @@ int VM_Start(VM* vm)
                 break;
             }
 
+            case ALLOC_ARR : {
+                static const uint32_t class_id = ARRAY_CLASS_ID;
+                uint32_t length = vm_pop(vm).as.as_int;
+                uint64_t free_index = find_free_memory_heap(vm->heap, vm->heap_size);
+                if (free_index == -1) {
+                    fprintf(stderr, "EndMemory error : cannot find free place to allocate new object in heap...\n Terminating VM\n");
+                    exit(8);
+                }
+                PettyObject* obj = vm->heap[free_index];
+
+                if (!obj) {
+                    obj = malloc(sizeof(PettyObject));
+                    vm->heap[free_index] = obj;
+                }
+
+                obj->is_free = false;
+                obj->Class_ID = class_id;
+                obj->Fields_Count = length;
+                obj->Fields = malloc(sizeof(PettyValue) * length);
+
+                PettyValue val;
+
+                val.kind = PT_OBJ_PTR;
+                val.as.as_obj_ptr = obj;
+
+                vm_push(vm, val); 
+                break;
+            }
+
+            case ARR_GET : {
+                PettyObject* obj = vm_pop(vm).as.as_obj_ptr;
+                uint32_t index = vm_pop(vm).as.as_int;
+                vm_push(vm, ARRAY_GET(obj, index));
+                break;
+            }
+
+            case ARR_SET : {
+                PettyObject* obj = vm_pop(vm).as.as_obj_ptr;
+                uint32_t index = vm_pop(vm).as.as_int;
+                PettyValue val = vm_pop(vm);
+                ARRAY_SET(obj, index, val);
+                break;
+            }
+
             case LOAD_FIELD : {
                 PettyObject* obj = vm_pop(vm).as.as_obj_ptr;
                 uint32_t index = VM_read_raw_Int(vm);
@@ -499,10 +558,19 @@ int VM_Start(VM* vm)
             _processOpCodeCast(vm, CAST_FROM_INT32_TO_FLOAT32, as_int, as_float, PT_FLOAT32, float32_t)
 
             _processOpCodeMath(vm, int32_t, as_int, INT_EQ, ==, as_bool, PT_BOOL, int32_t)
+            _processOpCodeMath(vm, int32_t, as_int, INT_LE, <, as_bool, PT_BOOL, int32_t)
+            _processOpCodeMath(vm, int32_t, as_int, INT_GE, >, as_bool, PT_BOOL, int32_t)
+            _processOpCodeMath(vm, int32_t, as_int, INT_LEQ, <=, as_bool, PT_BOOL, int32_t)
+            _processOpCodeMath(vm, int32_t, as_int, INT_GEQ, >=, as_bool, PT_BOOL, int32_t)
             _processOpCodeMath(vm, int32_t, as_int, ADD_INT, +, as_int, PT_INT32, int32_t)
             _processOpCodeMath(vm, int32_t, as_int, SUB_INT, -, as_int, PT_INT32, int32_t)
             _processOpCodeMath(vm, int32_t, as_int, MUL_INT, *, as_int, PT_INT32, int32_t)
             _processOpCodeMath(vm, int32_t, as_int, DIV_INT, /, as_float, PT_FLOAT32, float32_t)
+            _processOpCodeMath(vm, float32_t, as_float, FLOAT_EQ, ==, as_bool, PT_BOOL, float32_t);
+            _processOpCodeMath(vm, float32_t, as_float, FLOAT_LE, <, as_bool, PT_BOOL, float32_t)
+            _processOpCodeMath(vm, float32_t, as_float, FLOAT_GE, >, as_bool, PT_BOOL, float32_t)
+            _processOpCodeMath(vm, float32_t, as_float, FLOAT_LEQ, <=, as_bool, PT_BOOL, float32_t)
+            _processOpCodeMath(vm, float32_t, as_float, FLOAT_GEQ, >=, as_bool, PT_BOOL, float32_t)
             _processOpCodeMath(vm, float32_t, as_float, ADD_FLOAT, +, as_float, PT_FLOAT32, float32_t)
             _processOpCodeMath(vm, float32_t, as_float, SUB_FLOAT, -, as_float, PT_FLOAT32, float32_t)
             _processOpCodeMath(vm, float32_t, as_float, MUL_FLOAT, *, as_float, PT_FLOAT32, float32_t)

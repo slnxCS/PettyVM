@@ -7,7 +7,7 @@
 #include "../types.h"
 #include "../Collections/stack.h"
 
-#define BYTECODE_VER (1.391f)
+#define BYTECODE_VER (1.393f)
 
 #define FRAME_STACK_MAX (100)
 #define HEAP_MEMORY_OBJ_COUNT (128)
@@ -44,6 +44,20 @@ typedef enum VM_OpCode : byte {
     CALL_METHOD = 30,
     LOAD_FIELD = 31,
     STORE_FIELD = 32,
+    ALLOC_ARR = 35,
+    ARR_GET = 36,
+    ARR_SET = 37,
+
+    INT_LEQ = 40,
+    INT_GEQ = 41,
+    INT_LE = 42,
+    INT_GE = 43,
+
+    FLOAT_EQ = 44,
+    FLOAT_LEQ = 45,
+    FLOAT_GEQ = 46,
+    FLOAT_LE = 47,
+    FLOAT_GE = 48,
 } VM_OpCode;
 
 typedef enum VM_ConstantType {
