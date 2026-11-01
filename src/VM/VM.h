@@ -7,17 +7,17 @@
 #include "../types.h"
 #include "../Collections/stack.h"
 
-#define BYTECODE_VER (1.394f)
+#define BYTECODE_VER (1.395f)
 
-#define FRAME_STACK_MAX (100)
-#define HEAP_MEMORY_OBJ_COUNT (128)
+#define FRAME_STACK_MAX (2000)
+#define HEAP_MEMORY_OBJ_COUNT (1000)
 #define HEAP_GET_ALLOC_COUNT_BYTES (HEAP_MEMORY_OBJ_COUNT * sizeof(PettyObject*))
 
 typedef enum VM_OpCode : byte {
     PUSH_CONSTANT = 1,
     STORE_LOCAL = 2,
     STORE_GLOBAL = 3,
-    SYS_CALL = 4,
+    CALL_NATIVE = 4,
     LOAD_LOCAL = 5,
     LOAD_GLOBAL = 6,
     RET = 7,
@@ -85,9 +85,7 @@ struct Frame {
     uint32_t locals_count;
 };
 
-typedef struct VM VM;
-
-struct VM 
+typedef struct VM
 {
     byte* OpCodes;
     uint64_t current_instruction;
@@ -103,7 +101,7 @@ struct VM
     PettyObject** heap;
     uint32_t classes_count;
     PettyClass* classes;
-};
+} VM;
 
 extern int32_t VM_read_raw_Int(VM* vm);
 extern PettyValue VM_read_Int(VM* vm);

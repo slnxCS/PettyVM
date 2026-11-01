@@ -2,6 +2,13 @@
 #define PETTYCLASS_H
 
 #include "../../types.h"
+#include "../PettyValue.h"
+
+typedef struct VM VM;
+
+#define INT32_CLASS_ID (2)
+#define FLOAT32_CLASS_ID (3)
+#define BOOL_CLASS_ID (6)
 
 typedef struct PettyClass {
     int32_t ID;
@@ -11,5 +18,7 @@ typedef struct PettyClass {
     uint32_t NameLength;
     uint64_t* VirtualMethodsTable;
 } PettyClass;
+
+inline extern PettyClass* ClassOf(VM* vm, PettyValue val);
 
 #endif // PETTYCLASS_H

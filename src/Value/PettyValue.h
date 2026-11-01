@@ -1,7 +1,9 @@
 #ifndef PT_VAL_H
 #define PT_VAL_H
 
-#include "./Objects/PettyObject.h"
+//#include "./Objects/PettyObject.h"
+typedef struct PettyObject PettyObject;
+
 #include "../types.h"
 
 

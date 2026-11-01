@@ -47,9 +47,9 @@ case opCode : \
     break;\
 }
 
-typedef void(*PettySysFunc)(VM* vm, int32_t arity);
+typedef void(*PettyNativeFunc)(VM* vm, int32_t arity);
 
-void pt_vm_sysprint_int32(VM* vm, int32_t arity) {
+void pt_vm_native_print_int32(VM* vm, int32_t arity) {
     //for (int i = 0; i < arity; i++) 
     {
         volatile int32_t num = stack_pop(&(vm->stack)).as.as_int;
@@ -57,19 +57,19 @@ void pt_vm_sysprint_int32(VM* vm, int32_t arity) {
     }
 }
 
-void pt_vm_sysprint_float32(VM* vm, int32_t arity) {
+void pt_vm_native_print_float32(VM* vm, int32_t arity) {
     float32_t num = stack_pop(&(vm->stack)).as.as_float;
     printf("%g\n", num);
 }
 
-void pt_vm_sysread_int32(VM* vm, int32_t arity) {
+void pt_vm_native_read_int32(VM* vm, int32_t arity) {
     PettyValue val;
     val.kind = PT_INT32;
     scanf("%d", &(val.as.as_int));
     vm_push(vm, val);
 }
 
-void pt_vm_sysrandom(VM* vm, int32_t) {
+void pt_vm_native_random(VM* vm, int32_t) {
     int32_t max = vm_pop(vm).as.as_int;
     int32_t min = vm_pop(vm).as.as_int;
     PettyValue val;
@@ -78,34 +78,43 @@ void pt_vm_sysrandom(VM* vm, int32_t) {
     vm_push(vm, val);
 }
 
-void pt_vm_sysprint_bool(VM* vm, int32_t arity) {
+void pt_vm_native_print_bool(VM* vm, int32_t arity) {
     PettyValue value = stack_pop(&(vm->stack));
     printf("%s\n", value.as.as_bool ? "true" : "false");
 }
 
-void pt_vm_sysarrayget(VM* vm, int32_t arity) {
+void pt_vm_native_arrayget(VM* vm, int32_t arity) {
     uint32_t index = vm_pop(vm).as.as_int;
     PettyObject* array = vm_pop(vm).as.as_obj_ptr;
-
+    Array_ThrowIfOutOfRange(array, index);
     vm_push(vm, ARRAY_GET(array, index));
 }
 
-void pt_vm_sysarrayset(VM* vm, int32_t arity) {
+void pt_vm_native_arrayset(VM* vm, int32_t arity) {
     PettyValue val = vm_pop(vm);
     uint32_t index = vm_pop(vm).as.as_int;
     PettyObject* array = vm_pop(vm).as.as_obj_ptr;
-
+    Array_ThrowIfOutOfRange(array, index);
     ARRAY_SET(array, index, val);
 }
 
-PettySysFunc vm_sys_funcs[] = {
-    pt_vm_sysprint_int32,
-    pt_vm_sysprint_float32,
-    pt_vm_sysprint_bool,
-    pt_vm_sysread_int32,
-    pt_vm_sysrandom,
-    pt_vm_sysarrayget,
-    pt_vm_sysarrayset,
+void pt_vm_native_arraylen(VM* vm, int32_t arity) {
+    PettyObject* ar = vm_pop(vm).as.as_obj_ptr;
+    PettyValue val;
+    val.kind = PT_INT32;
+    val.as.as_int = ARRAY_LEN(ar);
+    vm_push(vm, val);
+}
+
+PettyNativeFunc vm_native_funcs[] = {
+    pt_vm_native_print_int32,
+    pt_vm_native_print_float32,
+    pt_vm_native_print_bool,
+    pt_vm_native_read_int32,
+    pt_vm_native_random,
+    pt_vm_native_arrayget,
+    pt_vm_native_arrayset,
+    pt_vm_native_arraylen,
 };
 
 void VM_addConstant(VM* vm, uint32_t constant_index) {
@@ -245,6 +254,7 @@ int VM_init(VM* vm, byte* input, const char* file_name)
 bool VM_read_raw_bool(VM* vm) {
     bool b = current_code(vm) != 0;
     vm_advance(vm);
+
     return b;
 }
 
@@ -276,7 +286,7 @@ void VM_read_raw_string(VM* vm, char* buffer, uint32_t length) {
     }
 }
 
-int32_t VM_read_raw_Int(VM* vm) {
+inline int32_t VM_read_raw_Int(VM* vm) {
     int32_t val;
     memcpy(&val, vm->OpCodes + vm->current_instruction, 4);
     vm_advance_n(vm, 4);
@@ -284,17 +294,10 @@ int32_t VM_read_raw_Int(VM* vm) {
 }
 
 PettyValue VM_read_Int(VM* vm) {
-    int32_t v = 0;
     PettyValue val;
 
-    for (int i = 0; i < 4; i++) 
-    {
-        v |= ((uint8_t)current_code(vm)) << (8 * i);
-        vm_advance(vm);
-    }
-
     val.kind = PT_INT32;
-    val.as.as_int = v;
+    val.as.as_int = VM_read_raw_Int(vm);
     return val;
 }
 
@@ -368,13 +371,13 @@ int VM_Start(VM* vm)
 
                 int32_t func_index = VM_read_raw_Int(vm);
                 int32_t func_arity = VM_read_raw_Int(vm);
-                PettyObject* instance = vm->stack.ptr[vm->stack.top_index - func_arity].as.as_obj_ptr;
+                PettyValue instance = vm->stack.ptr[vm->stack.top_index - func_arity];
                 Frame frame;
                 frame.return_ip = vm->current_instruction;
                 frame.stack_ptr_index = vm->stack.top_index - func_arity;
                 frame.arity = func_arity;
                 vm->call_stack[vm->frame_pointer++] = frame;
-                vm->current_instruction = vm->classes[instance->Class_ID].VirtualMethodsTable[func_index];
+                vm->current_instruction = ClassOf(vm, instance)->VirtualMethodsTable[func_index];
                 break;
             }
 
@@ -404,11 +407,11 @@ int VM_Start(VM* vm)
                 break;
             }
 
-            case SYS_CALL :
+            case CALL_NATIVE :
             {
                 int32_t sys_func_index = VM_read_raw_Int(vm);
                 int32_t arity = VM_read_raw_Int(vm);
-                vm_sys_funcs[sys_func_index](vm, arity);
+                vm_native_funcs[sys_func_index](vm, arity);
                 break;
             }
 
@@ -423,10 +426,7 @@ int VM_Start(VM* vm)
             {
                 uint32_t class_id = VM_read_raw_Int(vm);
                 uint64_t free_index = find_free_memory_heap(vm->heap, vm->heap_size);
-                if (free_index == -1) {
-                    fprintf(stderr, "EndMemory error : cannot find free place to allocate new object in heap...\n Terminating VM\n");
-                    exit(8);
-                }
+                if (free_index == -1) ThrowOutOfMemoryException();
                 PettyObject* obj = vm->heap[free_index];
 
                 if (!obj) {
@@ -480,6 +480,7 @@ int VM_Start(VM* vm)
             case ARR_GET : {
                 PettyObject* obj = vm_pop(vm).as.as_obj_ptr;
                 uint32_t index = vm_pop(vm).as.as_int;
+                Array_ThrowIfOutOfRange(obj, index);
                 vm_push(vm, ARRAY_GET(obj, index));
                 break;
             }
@@ -487,6 +488,7 @@ int VM_Start(VM* vm)
             case ARR_SET : {
                 PettyObject* obj = vm_pop(vm).as.as_obj_ptr;
                 uint32_t index = vm_pop(vm).as.as_int;
+                Array_ThrowIfOutOfRange(obj, index);
                 PettyValue val = vm_pop(vm);
                 ARRAY_SET(obj, index, val);
                 break;
