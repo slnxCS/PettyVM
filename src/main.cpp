@@ -1,8 +1,8 @@
-#include "types.h"
-#include "VM/VM.h"
-#include "file_reader.h"
+#include "VM/VM.hpp"
+#include "file_reader.hpp"
 #include <stdlib.h>
 #include <time.h>
+#include <iostream>
 
 #define DEBUG
 
@@ -11,11 +11,10 @@
 
 int main(void) {
     srand(time(NULL));
-    VM vm;
-    byte* input = (byte*)read_file(DEBUG_FILE_NAME);
-    VM_init(&vm, input, DEBUG_FILE_NAME);
-    VM_Start(&vm);
-    VM_Free(&vm);
+    uint8_t* input = (uint8_t*)Petty::read_file(DEBUG_FILE_NAME);
+    Petty::VM vm(input, DEBUG_FILE_NAME);
+    vm.Init();
+    vm.Start();
     return 0;
 }
 #else

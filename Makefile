@@ -1,25 +1,36 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -Og -g -Iinclude
+CC = g++
+INCLUDES = -I. -I./src
+
+CFLAGS = -Wall -Wextra -std=c++23 -Og -g $(INCLUDES)
 LDFLAGS = -lm
 
 BUILD_DIR = build
 TARGET = $(BUILD_DIR)/main
 
-SRCS = $(shell find . -name '*.c' -not -path './build/*')
-OBJS = $(patsubst ./%.c,$(BUILD_DIR)/%.o,$(SRCS))
+SRCS = $(shell find . -type f \( -name "*.cpp" -o -name "*.c" -o -name "*.cc" \) -not -path './build/*')
 
-.PHONY: all clean run
+OBJS = $(SRCS:%=$(BUILD_DIR)/%.o)
+
+.PHONY: all clean clear run
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CC) $(OBJS) -o $@ $(LDFLAGS)
 
-$(BUILD_DIR)/%.o: %.c
+$(BUILD_DIR)/%.cpp.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-clear: 
+$(BUILD_DIR)/%.c.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/%.cc.o: %.cc
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean clear: 
 	rm -rf $(BUILD_DIR)
 
 run: $(TARGET)
