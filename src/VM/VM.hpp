@@ -6,7 +6,7 @@
 #include "Collections/stack.hpp"
 #include <cstdint>
 
-#define BYTECODE_VER (1.395f)
+#define BYTECODE_VER (1.396f)
 
 #define FRAME_STACK_MAX (500001)
 #define HEAP_MEMORY_OBJ_COUNT (500000)
@@ -35,6 +35,10 @@ namespace Petty {
         SUB_FLOAT = 18,
         MUL_FLOAT = 19,
         DIV_FLOAT = 20,
+
+        CHECK_CAST_CLASSES = 21,
+        POP = 22,
+
         JMP_IF_FALSE = 26,
         JMP_IF_TRUE = 27,
         JMP = 28,

@@ -478,6 +478,12 @@ namespace Petty {
                 DISPATCH(this);
             }
 
+            CASE(POP) : {
+                VM_ADVANCE(this);
+                stack.Pop();
+                DISPATCH(this);
+            }
+
             CASE(PUSH_CONSTANT) :  
             {
                 VM_ADVANCE(this);
@@ -567,6 +573,14 @@ namespace Petty {
                 PettyValue val = VM_POP(this);
                 uint32_t field_index = ReadInt();
                 obj->Fields[field_index] = val;
+                DISPATCH(this);
+            }
+
+            CASE (CHECK_CAST_CLASSES) : {
+                VM_ADVANCE(this);
+                uint32_t class_id = ReadInt();
+                PettyValue val = VM_POP(this);
+                ThrowIfNotMatchClasses(this, val, class_id);
                 DISPATCH(this);
             }
 

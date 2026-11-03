@@ -18,7 +18,8 @@ namespace Petty {
         uint64_t* VirtualMethodsTable;
     };
 
-    const PettyClass* ClassOf(VM* vm, PettyValue val);
+    const PettyClass* ClassOf(VM* vm, const PettyValue& val);
+    void ThrowIfNotMatchClasses(VM* vm, const PettyValue& val, uint32_t classID);
 }
 
 #endif // PETTYCLASS_H

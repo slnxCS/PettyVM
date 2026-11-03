@@ -4,7 +4,7 @@
 #include "Value/PettyValue.hpp"
 
 namespace Petty {
-    const PettyClass* ClassOf(VM* vm, PettyValue val) {
+    const PettyClass* ClassOf(VM* vm, const PettyValue& val) {
         switch (val.kind)
         {
             case PettyValue::Kind::PT_OBJ_PTR :
@@ -20,5 +20,16 @@ namespace Petty {
                 return &(vm->Classes()[BOOL_CLASS_ID]);
         }
         return nullptr;
+    }
+
+    [[noreturn]] void ThrowCannotCastException(uint32_t id_from, uint32_t id_to) {
+        fprintf(stderr, "Fatal error : Cannot convert object with type %d to type %d", id_from , id_to);
+        exit(17);
+    }
+
+    void ThrowIfNotMatchClasses(VM* vm, const PettyValue& val, uint32_t classID) {
+        uint32_t objClassId = ClassOf(vm, val)->ID;
+        if (objClassId != classID)
+            ThrowCannotCastException(objClassId, classID);
     }
 }
